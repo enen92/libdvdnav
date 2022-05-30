@@ -332,13 +332,15 @@ int64_t dvdnav_convert_time(const dvd_time_t *time) {
 }
 
 /*
- * Returns 1 if block contains NAV packet, 0 otherwise.
- * Processes said NAV packet if present.
+ * Returns the packet type of the provided block. Returns DVDNAV_PACKET_UNKNOWN if the packet could not be identified,
+ * DVDNAV_PACKET_NAV if the packet is present or DVDNAV_PACKET_AUDIO/DVDNAV_PACKET_VIDEO if the packet is an MPEG-1 or MPEG-2
+ * Packet.
+ * If the packet is a nav packet (DVDNAV_PACKET_NAV) the function processes the given nav packet decoding the pci and dsi.
  *
  * Most of the code in here is copied from xine's MPEG demuxer
  * so any bugs which are found in that should be corrected here also.
  */
-static int32_t dvdnav_decode_packet(dvdnav_t *this, uint8_t *p,
+static DVDNAV_PACKET_TYPE dvdnav_decode_packet(dvdnav_t *this, uint8_t *p,
                                     dsi_t *nav_dsi, pci_t *nav_pci) {
   int32_t        bMpeg1 = 0;
   uint32_t       nHeaderLen;
@@ -366,7 +368,7 @@ static int32_t dvdnav_decode_packet(dvdnav_t *this, uint8_t *p,
   /* we should now have a PES packet here */
   if (p[0] || p[1] || (p[2] != 1)) {
     Log1(this, "demux error! %02x %02x %02x (should be 0x000001)",p[0],p[1],p[2]);
-    return 0;
+    return DVDNAV_PACKET_UNKNOWN;
   }
 
   nPacketLen = p[4] << 8 | p[5];
@@ -396,9 +398,16 @@ static int32_t dvdnav_decode_packet(dvdnav_t *this, uint8_t *p,
       p += 6;
       navRead_DSI(nav_dsi, p+1);
     }
-    return 1;
+    return DVDNAV_PACKET_NAV;
+  } else if (nStreamID == 0xbd) { /* private stream 1 (audio other than MPEG and subpictures) */
+    return DVDNAV_PACKET_OTHER_AUDIO_OR_SUBPICTURES;
+  } else if (nStreamID >= 0xc0 && nStreamID <= 0xdf) { /* MPEG-1 or MPEG-2 audio stream */
+    return DVDNAV_PACKET_MPEG_AUDIO;
+  } else if (nStreamID >= 0xe0 && nStreamID <= 0xef) { /* MPEG-1 or MPEG-2 video stream */
+    return DVDNAV_PACKET_MPEG_VIDEO;
   }
-  return 0;
+
+  return DVDNAV_PACKET_UNKNOWN;
 }
 
 /* DSI is used for most angle stuff.
@@ -588,12 +597,8 @@ dvdnav_status_t dvdnav_get_next_cache_block(dvdnav_t *this, uint8_t **buf,
           return DVDNAV_STATUS_ERR;
         }
         /* Decode nav into pci and dsi. Then get next VOBU info. */
-        if(!dvdnav_decode_packet(this, *buf, &this->dsi, &this->pci)) {
+        if (dvdnav_decode_packet(this, *buf, &this->dsi, &this->pci) != DVDNAV_PACKET_NAV) {
           printerr("Expected NAV packet but none found.");
-#ifdef _XBMC
-          /* skip this cell as we won't recover from this*/
-          vm_get_next_cell(this->vm);
-#endif
           pthread_mutex_unlock(&this->vm_lock);
           return DVDNAV_STATUS_ERR;
         }
@@ -895,41 +900,40 @@ dvdnav_status_t dvdnav_get_next_cache_block(dvdnav_t *this, uint8_t **buf,
       pthread_mutex_unlock(&this->vm_lock);
       return DVDNAV_STATUS_ERR;
     }
-    /* Decode nav into pci and dsi. Then get next VOBU info. */
-    if(!dvdnav_decode_packet(this, *buf, &this->dsi, &this->pci)) {
-      printerr("Expected NAV packet but none found.");
-#ifdef _XBMC
-      /* skip this cell as we won't recover from this*/
-      vm_get_next_cell(this->vm);
-#endif
+    /* Try to decode nav into pci and dsi if the decoded packet is of type nav. Then get next VOBU info. */
+    DVDNAV_PACKET_TYPE decoded_packet_type = dvdnav_decode_packet(this, *buf, &this->dsi, &this->pci);
+
+    if (decoded_packet_type == DVDNAV_PACKET_UNKNOWN) {
+      printerr("Could not decode packet.");
       pthread_mutex_unlock(&this->vm_lock);
       return DVDNAV_STATUS_ERR;
+    } else if (decoded_packet_type == DVDNAV_PACKET_NAV) {
+      /* We need to update the vm state->blockN with which VOBU we are in.
+      * This is so RSM resumes to the VOBU level and not just the CELL level.
+      */
+      this->vm->state.blockN = this->vobu.vobu_start - this->position_current.cell_start;
+
+      dvdnav_get_vobu(this, &this->dsi, &this->pci, &this->vobu);
+      this->vobu.blockN = 0;
+      /* Give the cache a hint about the size of next VOBU.
+      * This improves pre-caching, because the VOBU will almost certainly be read entirely.
+      */
+      dvdnav_pre_cache_blocks(this->cache, this->vobu.vobu_start+1, this->vobu.vobu_length+1);
+
+      /* release NAV menu filter, when we reach the same NAV packet again */
+      if (this->last_cmd_nav_lbn == this->pci.pci_gi.nv_pck_lbn)
+        this->last_cmd_nav_lbn = SRI_END_OF_CELL;
+
+      /* Successfully got a NAV packet */
+      (*event) = DVDNAV_NAV_PACKET;
+      #ifdef LOG_DEBUG
+      Log3(this, "NAV_PACKET");
+      #endif
+      (*len) = 2048;
+      this->cur_cell_time = dvdnav_convert_time(&this->dsi.dsi_gi.c_eltm);
+      pthread_mutex_unlock(&this->vm_lock);
+      return DVDNAV_STATUS_OK;
     }
-    /* We need to update the vm state->blockN with which VOBU we are in.
-     * This is so RSM resumes to the VOBU level and not just the CELL level.
-     */
-    this->vm->state.blockN = this->vobu.vobu_start - this->position_current.cell_start;
-
-    dvdnav_get_vobu(this, &this->dsi, &this->pci, &this->vobu);
-    this->vobu.blockN = 0;
-    /* Give the cache a hint about the size of next VOBU.
-     * This improves pre-caching, because the VOBU will almost certainly be read entirely.
-     */
-    dvdnav_pre_cache_blocks(this->cache, this->vobu.vobu_start+1, this->vobu.vobu_length+1);
-
-    /* release NAV menu filter, when we reach the same NAV packet again */
-    if (this->last_cmd_nav_lbn == this->pci.pci_gi.nv_pck_lbn)
-      this->last_cmd_nav_lbn = SRI_END_OF_CELL;
-
-    /* Successfully got a NAV packet */
-    (*event) = DVDNAV_NAV_PACKET;
-#ifdef LOG_DEBUG
-    Log3(this, "NAV_PACKET");
-#endif
-    (*len) = 2048;
-    this->cur_cell_time = dvdnav_convert_time(&this->dsi.dsi_gi.c_eltm);
-    pthread_mutex_unlock(&this->vm_lock);
-    return DVDNAV_STATUS_OK;
   }
 
   /* If we've got here, it must just be a normal block. */

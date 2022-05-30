@@ -84,6 +84,14 @@ typedef enum {
   DSI_ILVU_MASK  = 0xf000
 } DSI_ILVU;
 
+typedef enum {
+  DVDNAV_PACKET_UNKNOWN                      = 0,
+  DVDNAV_PACKET_NAV                          = 1,
+  DVDNAV_PACKET_MPEG_AUDIO                   = 2,
+  DVDNAV_PACKET_MPEG_VIDEO                   = 3,
+  DVDNAV_PACKET_OTHER_AUDIO_OR_SUBPICTURES   = 4
+} DVDNAV_PACKET_TYPE;
+
 typedef struct read_cache_s read_cache_t;
 
 /*
