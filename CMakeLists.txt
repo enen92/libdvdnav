@@ -68,28 +68,36 @@ set(SUPPORT_ATTRIBUTE_VISIBILITY_DEFAULT 1)
 set(SUPPORT_FLAG_VISIBILITY 1)
 set(VERSION ${DVDNAV_VERSION})
 
+set(DVDNAV_MAJOR ${DVDNAV_VERSION_MAJOR})
+set(DVDNAV_MINOR ${DVDNAV_VERSION_MAJOR})
+set(DVDNAV_SUB ${DVDNAV_VERSION_MICRO})
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cm ${CMAKE_BINARY_DIR}/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/dvdnav/version.h.in
+               ${CMAKE_BINARY_DIR}/src/dvdnav/version.h @ONLY)
 
 add_library(${PROJECT_NAME} SHARED
-  src/vm/decoder.c
-  src/vm/decoder.h
-  src/vm/getset.c
-  src/vm/getset.h
-  src/vm/play.c
-  src/vm/play.h
-  src/vm/vm.c
-  src/vm/vm.h
-  src/vm/vmcmd.c
-  src/vm/vmcmd.h
-  src/vm/vmget.c
-  src/dvdnav.c
-  src/dvdnav_internal.h
-  src/highlight.c
-  src/navigation.c
-  src/read_cache.c
-  src/read_cache.h
-  src/searching.c
-  src/settings.c
+	src/dvdnav.c
+	src/read_cache.c
+	src/navigation.c
+	src/highlight.c
+    src/logger.c
+    src/logger.h
+	src/searching.c
+	src/settings.c
+	src/dvdnav_internal.h
+	src/read_cache.h
+	src/vm/decoder.c
+	src/vm/decoder.h
+	src/vm/vm.c
+	src/vm/vm.h
+	src/vm/play.c
+	src/vm/play.h
+	src/vm/getset.c
+	src/vm/getset.h
+	src/vm/vmget.c
+	src/vm/vmcmd.c
+	src/vm/vmcmd.h
 )
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}
@@ -142,6 +150,7 @@ install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/dvdnav/dvd_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/dvdnav/dvdnav.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/dvdnav/dvdnav_events.h
+  ${CMAKE_BINARY_DIR}/src/dvdnav/version.h
   DESTINATION include/dvdnav)
 
 install(EXPORT ${PROJECT_NAME}
