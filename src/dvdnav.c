@@ -964,6 +964,20 @@ dvdnav_status_t dvdnav_get_serial_string(dvdnav_t *this, const char **serial_str
   return DVDNAV_STATUS_OK;
 }
 
+dvdnav_status_t dvdnav_get_volid_string(dvdnav_t *this, const char **volid_str) {
+  if (!this || !this->vm || !this->vm->dvd) {
+    printerr("Invalid state, vm or reader not available");
+    return DVDNAV_STATUS_ERR;
+  }
+
+  if (DVDUDFVolumeInfo(this->vm->dvd, (char*)*volid_str, 32, NULL, 0) == -1) {
+    if (DVDISOVolumeInfo(this->vm->dvd, (char*)*volid_str, 33, NULL, 0) == -1) {
+      return DVDNAV_STATUS_ERR;
+    }
+  }
+  return DVDNAV_STATUS_OK;
+}
+
 uint8_t dvdnav_get_video_aspect(dvdnav_t *this) {
   uint8_t         retval;
 

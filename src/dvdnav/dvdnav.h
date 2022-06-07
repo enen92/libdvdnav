@@ -609,6 +609,15 @@ dvdnav_status_t dvdnav_get_title_string(dvdnav_t *self, const char **title_str);
 dvdnav_status_t dvdnav_get_serial_string(dvdnav_t *self, const char **serial_str);
 
 /*
+ * Fills the volid_str string with VolumeIdentifier of the disc.
+ * The VolumeIdentifier might be latin-1 encoded (8bit unicode)
+ * null terminated and max 32 bytes (including '\0'); or coded
+ * with '0-9','A-Z','_' null terminated and max 33 bytes
+ * (including '\0'). Provided volid_str must be at least 33 bytes.
+ */
+dvdnav_status_t dvdnav_get_volid_string(dvdnav_t *self, const char **volid_str);
+
+/*
  * Get video aspect code.
  * The aspect code does only change on VTS boundaries.
  * See the DVDNAV_VTS_CHANGE event.
