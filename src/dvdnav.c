@@ -34,7 +34,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
-#include <stdint.h>
 #include <sys/time.h>
 #include "dvdnav/dvdnav.h"
 #include <dvdread/dvd_reader.h>
@@ -591,10 +590,6 @@ dvdnav_status_t dvdnav_get_next_cache_block(dvdnav_t *this, uint8_t **buf,
         /* Decode nav into pci and dsi. Then get next VOBU info. */
         if(!dvdnav_decode_packet(this, *buf, &this->dsi, &this->pci)) {
           printerr("Expected NAV packet but none found.");
-#ifdef _XBMC
-          /* skip this cell as we won't recover from this*/
-          vm_get_next_cell(this->vm);
-#endif
           pthread_mutex_unlock(&this->vm_lock);
           return DVDNAV_STATUS_ERR;
         }
@@ -899,10 +894,6 @@ dvdnav_status_t dvdnav_get_next_cache_block(dvdnav_t *this, uint8_t **buf,
     /* Decode nav into pci and dsi. Then get next VOBU info. */
     if(!dvdnav_decode_packet(this, *buf, &this->dsi, &this->pci)) {
       printerr("Expected NAV packet but none found.");
-#ifdef _XBMC
-      /* skip this cell as we won't recover from this*/
-      vm_get_next_cell(this->vm);
-#endif
       pthread_mutex_unlock(&this->vm_lock);
       return DVDNAV_STATUS_ERR;
     }
@@ -961,6 +952,29 @@ dvdnav_status_t dvdnav_get_title_string(dvdnav_t *this, const char **title_str) 
 
 dvdnav_status_t dvdnav_get_serial_string(dvdnav_t *this, const char **serial_str) {
   (*serial_str) = this->vm->dvd_serial;
+  return DVDNAV_STATUS_OK;
+}
+
+dvdnav_status_t dvdnav_get_volid_string(dvdnav_t *this, char *volid_str) {
+  if (!this || !this->vm || !this->vm->dvd) {
+    printerr("Invalid state, vm or reader not available.");
+    return DVDNAV_STATUS_ERR;
+  }
+
+  char *volid = malloc(33);
+  if (volid == NULL) {
+    printerr("Insufficient memory available.");
+    return DVDNAV_STATUS_ERR;
+  }
+
+  if (DVDUDFVolumeInfo(this->vm->dvd, volid, 32, NULL, 0) == -1) {
+    if (DVDISOVolumeInfo(this->vm->dvd, volid, 33, NULL, 0) == -1) {
+      printerr("Failed to obtain volume id.");
+      free(volid);
+      return DVDNAV_STATUS_ERR;
+    }
+  }
+  volid_str = volid;
   return DVDNAV_STATUS_OK;
 }
 
