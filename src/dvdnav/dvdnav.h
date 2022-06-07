@@ -30,7 +30,6 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include "version.h"
 #include <dvdnav/dvd_types.h>
 #include <dvdread/dvd_reader.h>
@@ -423,14 +422,6 @@ dvdnav_status_t dvdnav_sector_search(dvdnav_t *self,
 int64_t dvdnav_get_current_time(dvdnav_t *self);
 
 /*
- * Find the nearest vobu and jump to it
- *
- * Alternative to dvdnav_time_search
- */
-dvdnav_status_t dvdnav_jump_to_sector_by_time(dvdnav_t *this, 
-                                              uint64_t time_in_pts_ticks, int32_t mode);
-
-/*
  * Stop playing the current position and start playback of the title
  * from the specified timecode.
  *
@@ -597,7 +588,7 @@ dvdnav_status_t dvdnav_spu_language_select(dvdnav_t *self,
  * this is a descriptive string such as `THE_MATRIX' but sometimes is singularly
  * uninformative such as `PDVD-011421'. Some DVD authors even forget to set this,
  * so you may also read the default of the authoring software they used, like
- * `DVDVolume'.
+ * `DVDVolume' (see also dvdnav_get_volid_string).
  */
 dvdnav_status_t dvdnav_get_title_string(dvdnav_t *self, const char **title_str);
 
@@ -607,6 +598,19 @@ dvdnav_status_t dvdnav_get_title_string(dvdnav_t *self, const char **title_str);
  * title string.
  */
 dvdnav_status_t dvdnav_get_serial_string(dvdnav_t *self, const char **serial_str);
+
+/*
+ * Fills the volid_str string with the VolumeIdentifier of the disc.
+ * The VolumeIdentifier might be latin-1 encoded (8bit unicode)
+ * null terminated and max 32 bytes (including '\0'); or coded
+ * with '0-9','A-Z','_' null terminated and max 33 bytes
+ * (including '\0').
+ * See also dvdnav_get_title_string
+ *
+ * Note: volid_str is malloc'd so caller has to free() the returned
+ * string when done with it.
+ */
+dvdnav_status_t dvdnav_get_volid_string(dvdnav_t *self, const char **volid_str);
 
 /*
  * Get video aspect code.
