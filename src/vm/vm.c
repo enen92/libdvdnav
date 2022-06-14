@@ -40,6 +40,7 @@
 
 #include <dvdread/nav_types.h>
 #include <dvdread/ifo_read.h>
+#include <dvdread/dvd_filesystem.h>
 #include "dvdnav/dvdnav.h"
 
 #include "decoder.h"
@@ -334,7 +335,7 @@ dvd_reader_t *vm_get_dvd_reader(vm_t *vm) {
 
 int vm_start(vm_t *vm) {
   if (vm->stopped) {
-    if (!vm_reset(vm, NULL, NULL, NULL))
+    if (!vm_reset(vm, NULL, NULL, NULL, NULL))
       return 0;
 
     vm->stopped = 0;
@@ -368,7 +369,7 @@ static void vm_close(vm_t *vm) {
 }
 
 int vm_reset(vm_t *vm, const char *dvdroot,
-             void *priv, dvdnav_stream_cb *stream_cb) {
+             void *priv, dvdnav_stream_cb *stream_cb, dvd_reader_dir_cb *dir_cb) {
   /*  Setup State */
   memset(vm->state.registers.SPRM, 0, sizeof(vm->state.registers.SPRM));
   memset(vm->state.registers.GPRM, 0, sizeof(vm->state.registers.GPRM));
@@ -405,11 +406,15 @@ int vm_reset(vm_t *vm, const char *dvdroot,
 
   vm->hop_channel                = 0;
 
+  vm->priv = priv;
+
   /* save target callbacks */
   if(stream_cb)
       vm->streamcb = *stream_cb;
   else
       vm->streamcb = (dvdnav_stream_cb) { NULL, NULL, NULL };
+
+  vm->dir_cb = dir_cb;
 
   /* bind local callbacks */
   vm->dvdstreamcb.pf_seek = vm->streamcb.pf_seek ? dvd_reader_seek_handler : NULL;
@@ -427,7 +432,7 @@ int vm_reset(vm_t *vm, const char *dvdroot,
     /* Only install log handler if we have one ourself */
     dvd_logger_cb *p_dvdread_logcb = vm->logcb.pf_log ? &dvdread_logcb : NULL;
     if(dvdroot)
-        vm->dvd = DVDOpen2(vm, p_dvdread_logcb, dvdroot);
+        vm->dvd = DVDOpenFiles(vm, p_dvdread_logcb, dvdroot, &vm->streamcb, vm->dir_cb);
     else if(vm->priv && vm->dvdstreamcb.pf_read)
         vm->dvd = DVDOpenStream2(vm, p_dvdread_logcb, &vm->dvdstreamcb);
 #else
