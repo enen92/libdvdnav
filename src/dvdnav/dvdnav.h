@@ -109,6 +109,9 @@ dvdnav_status_t dvdnav_open2(dvdnav_t **dest,
 dvdnav_status_t dvdnav_open_stream2(dvdnav_t **dest,
                                     void *priv, const dvdnav_logger_cb *,
                                     dvdnav_stream_cb *stream_cb);
+dvdnav_status_t dvdnav_open_files(dvdnav_t **dest,
+                             const dvdnav_logger_cb *,
+                             const char *path, dvd_reader_dir_cb *dir_cb);
 
 dvdnav_status_t dvdnav_dup(dvdnav_t **dest, dvdnav_t *src);
 dvdnav_status_t dvdnav_free_dup(dvdnav_t * _this);
