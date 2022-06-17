@@ -70,6 +70,7 @@ typedef struct {
   void *priv;
   dvdnav_logger_cb logcb;
   dvdnav_stream_cb streamcb;
+  dvd_reader_dir_cb* dir_cb;
   dvd_reader_t *dvd;
   dvd_reader_stream_cb dvdstreamcb;
   ifo_handle_t *vmgi;
@@ -119,7 +120,7 @@ dvd_reader_t *vm_get_dvd_reader(vm_t *vm);
 int  vm_start(vm_t *vm);
 void vm_stop(vm_t *vm);
 int  vm_reset(vm_t *vm, const char *dvdroot, void *priv,
-              dvdnav_stream_cb *stream_cb);
+              dvdnav_stream_cb *stream_cb, dvd_reader_dir_cb *dir_cb);
 
 /* copying and merging  - useful for try-running an operation */
 vm_t *vm_new_copy(vm_t *vm);

@@ -113,6 +113,10 @@ dvdnav_status_t dvdnav_open_stream2(dvdnav_t **dest,
 dvdnav_status_t dvdnav_dup(dvdnav_t **dest, dvdnav_t *src);
 dvdnav_status_t dvdnav_free_dup(dvdnav_t * _this);
 
+dvdnav_status_t dvdnav_open_files(dvdnav_t **dest,
+                             const dvdnav_logger_cb *,
+                             const char *path, dvd_reader_dir_cb *dir_cb);
+
 /*
  * Closes a dvdnav_t previously opened with dvdnav_open(), freeing any
  * memory associated with it.
