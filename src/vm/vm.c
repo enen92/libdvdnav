@@ -255,6 +255,23 @@ fail:
   return 0;
 }
 
+static int dvd_read_volid(const vm_t *vm) {
+  if (!vm || !vm->dvd) {
+    return 0;
+  }
+
+  if (DVDUDFVolumeInfo(vm->dvd, (char *)&vm->dvd_volid[0], 32, NULL, 0) == -1) {
+    if (DVDISOVolumeInfo(vm->dvd, (char *)&vm->dvd_volid[0], 33, NULL, 0) == -1) {
+      return 0;
+    }
+  }
+
+  char buffer[33] = {0};
+  escaped_strcpy(buffer, vm->dvd_volid, 32);
+  Log2(vm, "DVD Volume Id: %s", buffer);
+  return 1;
+}
+
 int ifoOpenNewVTSI(vm_t *vm, dvd_reader_t *dvd, int vtsN) {
   if(vm->state.vtsN == vtsN) {
     return 1; /*  We already have it */
@@ -473,6 +490,9 @@ int vm_reset(vm_t *vm, const char *dvdroot,
     /* ifoRead_TXTDT_MGI(vmgi); Not implemented yet */
     if(dvd_read_name(vm, vm->dvd_name, vm->dvd_serial, dvdroot) != 1) {
       Log1(vm, "vm: dvd_read_name failed");
+    }
+    if(!dvd_read_volid(vm)) {
+      Log1(vm, "vm: dvd_read_volid failed");
     }
   }
   if (vm->vmgi) {

@@ -78,6 +78,7 @@ typedef struct {
   int32_t       hop_channel;
   char          dvd_name[50];
   char          dvd_serial[15];
+  char          dvd_volid[33];
   int           stopped;
 } vm_t;
 
