@@ -620,9 +620,6 @@ dvdnav_status_t dvdnav_get_serial_string(dvdnav_t *self, const char **serial_str
  * or coded with '0-9','A-Z','_' null terminated and max 33 bytes
  * (including '\0').
  * See also dvdnav_get_title_string
- *
- * Note: The string is malloc'd so caller has to free() the returned
- * string when done with it.
  */
 const char * dvdnav_get_volid_string(dvdnav_t *self);
 
